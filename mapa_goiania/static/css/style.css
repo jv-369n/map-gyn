@@ -1,0 +1,59 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+#map {
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Estilo dos controles */
+.custom-control {
+    background: rgba(45, 52, 54, 0.9);
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+}
+
+.map-control {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    padding: 8px 12px;
+    background: #3d3d3d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: left;
+}
+
+.map-control:hover {
+    background: #4d4d4d;
+}
+
+/* Estilo dos marcadores */
+.custom-marker {
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 0 0 3px black;
+}
+
+.marker-bus { color: #9b59b6; }
+.marker-train { color: #f1c40f; }
+.marker-car { color: #ecf0f1; }
+
+/* Popup estilizado */
+.leaflet-popup-content-wrapper {
+    background: #2d3436 !important;
+    color: #f5f6fa !important;
+    border-radius: 4px !important;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.4) !important;
+}
+
+.leaflet-popup-tip {
+    background: #2d3436 !important;
+}

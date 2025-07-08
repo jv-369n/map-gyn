@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Goiânia</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; }
+        #map { width: 100vw; height: 100vh; }
+        
+        /* Controles minimalistas */
+        #map-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(20, 23, 26, 0.85);
+            padding: 8px;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 1px solid #2a2f36;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+            color: #e0e0e0;
+            width: 160px;
+        }
+        
+        .control-btn {
+            display: block;
+            width: 100%;
+            margin: 4px 0;
+            padding: 6px 8px;
+            background: rgba(40, 45, 50, 0.9);
+            color: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(60, 65, 70, 0.9);
+        }
+        
+        .control-btn.active {
+            background: rgba(80, 85, 90, 0.9);
+            font-weight: bold;
+        }
+        
+        .control-label {
+            display: inline-block;
+            width: 60px;
+        }
+        
+        /* Marcadores personalizados */
+        .custom-marker {
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 0 0 3px #000;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .marker-bus { color: #9b59b6; }    /* Roxo */
+        .marker-train { color: #f1c40f; }  /* Amarelo */
+        .marker-car { color: #bdc3c7; }    /* Cinza claro */
+        
+        /* Popup estilizado */
+        .leaflet-popup-content-wrapper {
+            background: rgba(30, 35, 40, 0.95) !important;
+            color: #f0f0f0 !important;
+            border-radius: 4px !important;
+            border: 1px solid #3a3f45 !important;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4) !important;
+        }
+        
+        .leaflet-popup-tip {
+            background: rgba(30, 35, 40, 0.95) !important;
+        }
+        
+        .leaflet-popup-close-button {
+            color: #aaa !important;
+        }
+        
+        .leaflet-popup-close-button:hover {
+            color: #fff !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="map-controls">
+        <button id="btn-add-marker" class="control-btn">
+            <span class="control-label">Marcador:</span> <span id="marker-status">Off</span>
+        </button>
+        <button id="btn-icon-type" class="control-btn">
+            <span class="control-label">Forma:</span> <span id="current-icon">X</span>
+        </button>
+        <button id="btn-marker-type" class="control-btn">
+            <span class="control-label">Tipo:</span> <span id="current-type">Ônibus</span>
+        </button>
+        <button id="btn-remove-marker" class="control-btn">
+            <span class="control-label">Remover</span> último
+        </button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Inicialização do Mapa
+        const map = L.map('map').setView([-16.6799, -49.255], 13);
+        
+        // Camada do mapa (estilo escuro)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Variáveis de estado
+        let isAddingMarker = false;
+        let currentIconType = 'x'; // 'x' ou 'circle'
+        let currentMarkerType = 'bus'; // 'bus', 'train' ou 'car'
+        const markers = [];
+        
+        // Configuração dos tipos de marcador
+        const markerTypes = {
+            bus: { name: 'Ônibus', color: '#9b59b6' },
+            train: { name: 'Trem', color: '#f1c40f' },
+            car: { name: 'Carro', color: '#bdc3c7' }
+        };
+
+        // Elementos da UI
+        const btnAddMarker = document.getElementById('btn-add-marker');
+        const btnIconType = document.getElementById('btn-icon-type');
+        const btnMarkerType = document.getElementById('btn-marker-type');
+        const btnRemoveMarker = document.getElementById('btn-remove-marker');
+        const markerStatus = document.getElementById('marker-status');
+        const currentIcon = document.getElementById('current-icon');
+        const currentType = document.getElementById('current-type');
+
+        // Event Listeners
+        btnAddMarker.addEventListener('click', toggleAddMarkerMode);
+        btnIconType.addEventListener('click', changeIconType);
+        btnMarkerType.addEventListener('click', changeMarkerType);
+        btnRemoveMarker.addEventListener('click', removeLastMarker);
+
+        // Alternar modo de adição de marcadores
+        function toggleAddMarkerMode() {
+            isAddingMarker = !isAddingMarker;
+            btnAddMarker.classList.toggle('active', isAddingMarker);
+            markerStatus.textContent = isAddingMarker ? 'On' : 'Off';
+        }
+
+        // Mudar tipo de ícone (X ou Círculo)
+        function changeIconType() {
+            currentIconType = currentIconType === 'x' ? 'circle' : 'x';
+            currentIcon.textContent = currentIconType === 'x' ? 'X' : '●';
+        }
+
+        // Mudar tipo de marcador (Ônibus, Trem, Carro)
+        function changeMarkerType() {
+            const types = Object.keys(markerTypes);
+            const currentIndex = types.indexOf(currentMarkerType);
+            currentMarkerType = types[(currentIndex + 1) % types.length];
+            currentType.textContent = markerTypes[currentMarkerType].name;
+        }
+
+        // Remover o último marcador adicionado
+        function removeLastMarker() {
+            if (markers.length > 0) {
+                const lastMarker = markers.pop();
+                map.removeLayer(lastMarker);
+            }
+        }
+
+        // Adicionar marcador ao clicar no mapa
+        map.on('click', function(e) {
+            if (!isAddingMarker) return;
+            
+            const typeInfo = markerTypes[currentMarkerType];
+            const icon = L.divIcon({
+                className: `custom-marker marker-${currentMarkerType}`,
+                html: currentIconType === 'x' ? 'X' : '●',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const marker = L.marker(e.latlng, { icon }).addTo(map);
+            marker.bindPopup(`
+                <b>${typeInfo.name}</b><br>
+                <small>${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}</small>
+            `);
+            
+            markers.push(marker);
+            toggleAddMarkerMode(); // Desativa o modo de adição após colocar um marcador
+        });
+    </script>
+</body>
+</html>
